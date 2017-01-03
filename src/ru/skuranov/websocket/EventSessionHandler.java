@@ -9,10 +9,14 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.json.JsonObject;
 import javax.json.spi.JsonProvider;
 import javax.websocket.Session;
-import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 
@@ -21,7 +25,7 @@ public class EventSessionHandler {
 
     final private GameController game = new GameController();
 
-    final private List<Session> sessions = new CopyOnWriteArrayList<>();
+    final private Map<Session, Lock> sessionsLockMap= new ConcurrentHashMap<>();
 
     final private static EventSessionHandler sessionHandler = new EventSessionHandler();
 
@@ -34,23 +38,23 @@ public class EventSessionHandler {
     }
 
     public void addSession(Session session) {
-        switch (sessions.size()) {
+        switch (sessionsLockMap.size()) {
             case 0:
-                if (!game.isActive())game.startGame(session);
+                if (!game.isActive()) game.startGame(session);
                 break;
             case 1:
                 game.runAdditionalSnake(session);
                 break;
             default:
-                System.out.println("Maximum of sessions reached");
+                Logger.getLogger(EventSessionHandler.class.getName())
+                        .log(Level.SEVERE, "Maximum of sessions reached", new Exception());
                 return;
         }
-        sessions.add(session);
+        sessionsLockMap.put(session, new ReentrantLock());
     }
 
     public void removeSession(Session session) {
-        sessions.remove(session);
-        game.stopGame();
+        sessionsLockMap.remove(session);
     }
 
 
@@ -60,7 +64,7 @@ public class EventSessionHandler {
         Set bodySet = game.getMovementsSet().stream()
                 .map(animalMovement -> animalMovement.getBody().getArrayView())
                 .collect(Collectors.toSet());
-        List<Integer> scores = sessions.stream().map(ses
+        List<Integer> scores = sessionsLockMap.keySet().stream().map(ses
                 -> game.getSessionSnakeMovementsMap().get(ses).getScore()).collect(Collectors.toList());
 
         JsonObject addMessage = provider.createObjectBuilder()
@@ -71,22 +75,16 @@ public class EventSessionHandler {
         return addMessage;
     }
 
-    private void sendToAllConnectedSessions(JsonObject message) {
-        sessions.forEach(session -> sendToSession(session, message));
-    }
 
     private void sendToSession(Session session, JsonObject message) {
         if (message != null) {
-            try {
-                session.getBasicRemote().sendText(message.toString());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            Lock lock = sessionsLockMap.get(session);
+            session.getAsyncRemote().sendText(message.toString());
         }
     }
 
     public void sendNewPositionsToClients() {
-        sessions.forEach(session -> sendToSession(session, generateNewPositionJSON()));
+        sessionsLockMap.keySet().forEach(session -> sendToSession(session, generateNewPositionJSON()));
     }
 
     public void sendGameOver() {
@@ -95,13 +93,13 @@ public class EventSessionHandler {
         JsonObject addMessage = provider.createObjectBuilder()
                 .add("action", "gameOver")
                 .build();
-        sessions.forEach(session -> sendToSession(session, addMessage));
+        sessionsLockMap.keySet().forEach(session -> sendToSession(session, addMessage));
     }
 
 
     public void clearSessionList(Session surviveSession) {
-        sessions.clear();
-        sessions.add(surviveSession);
+        sessionsLockMap.clear();
+        sessionsLockMap.put(surviveSession, new ReentrantLock());
     }
 
 

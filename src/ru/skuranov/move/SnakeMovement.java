@@ -1,13 +1,11 @@
-package ru.skuranov.moveanimals;
+package ru.skuranov.move;
 
 import ru.skuranov.direction.Direction;
 import ru.skuranov.GameController;
-import ru.skuranov.moveanimals.moveapples.SimpleAppleMovement;
+import ru.skuranov.move.moveapples.SimpleAppleMovement;
 import ru.skuranov.websocket.EventSessionHandler;
 
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class SnakeMovement extends Movement {
     private int snakeLenght;
@@ -36,9 +34,7 @@ public class SnakeMovement extends Movement {
             Thread.sleep(1000 / getGame().getBaseParams().get("gameSpeed"));
             move();
         } catch (InterruptedException e) {
-            Logger.getLogger(SnakeMovement.class.getName())
-                    .log(Level.SEVERE, "Thread interrupted", new Exception(e));
-            return e;
+            return null;
         }
     }
 

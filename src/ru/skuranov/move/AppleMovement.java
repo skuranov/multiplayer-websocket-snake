@@ -1,4 +1,4 @@
-package ru.skuranov.moveanimals;
+package ru.skuranov.move;
 
 
 import ru.skuranov.direction.Direction;
@@ -70,10 +70,9 @@ public abstract class AppleMovement extends Movement {
                 Thread.sleep(5000 / getGame().getBaseParams().get("gameSpeed"));
                 move();
             } catch (InterruptedException e) {
-                break;
+                return null;
             }
         }
-        return null;
     }
 
 

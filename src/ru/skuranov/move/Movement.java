@@ -1,4 +1,4 @@
-package ru.skuranov.moveanimals;
+package ru.skuranov.move;
 
 import ru.skuranov.direction.Direction;
 import ru.skuranov.drawable.Body;

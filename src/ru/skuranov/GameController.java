@@ -1,9 +1,9 @@
 package ru.skuranov;
 
-import ru.skuranov.moveanimals.AnimalMovement;
-import ru.skuranov.moveanimals.FrogMovement;
-import ru.skuranov.moveanimals.SnakeMovement;
-import ru.skuranov.moveanimals.movefrogs.GreenFrogMovement;
+import ru.skuranov.move.Movement;
+import ru.skuranov.move.AppleMovement;
+import ru.skuranov.move.SnakeMovement;
+import ru.skuranov.move.moveapples.SimpleAppleMovement;
 
 import javax.websocket.Session;
 import java.io.IOException;
@@ -15,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GameController {
 
@@ -24,11 +26,11 @@ public class GameController {
 
     private Random random = new Random();
 
-    private CopyOnWriteArraySet<FrogMovement> frogMovements = new CopyOnWriteArraySet<>();
+    private CopyOnWriteArraySet<AppleMovement> appleMovements = new CopyOnWriteArraySet<>();
     private ExecutorService executor;
-    //Number of threads in executor service = number of apples + maximum number of snakes on the field at the same time
     private ConcurrentHashMap<Session, SnakeMovement> sessionSnakeMovementsMap = new ConcurrentHashMap<>();
-    private CopyOnWriteArraySet<AnimalMovement> movementsSet = new CopyOnWriteArraySet<>();
+    private CopyOnWriteArraySet<Movement> movementsSet = new CopyOnWriteArraySet<>();
+    DataSender dataSender;
 
     {
         Properties prop = new Properties();
@@ -37,7 +39,8 @@ public class GameController {
             String filename = "SnakeGame.properties";
             input = GameController.class.getClassLoader().getResourceAsStream(filename);
             if (input == null) {
-                System.out.println("Sorry, unable to find " + filename);
+                Logger.getLogger(GameController.class.getName())
+                        .log(Level.SEVERE, "Sorry, unable to find " + filename, new Exception());
             }
 
             prop.load(input);
@@ -45,17 +48,20 @@ public class GameController {
             this.setBaseParams(prop.getProperty("width"),
                     prop.getProperty("height"),
                     prop.getProperty("snakeLenth"),
-                    prop.getProperty("frogCount"),
+                    prop.getProperty("appleCount"),
                     prop.getProperty("gameSpeed"));
 
         } catch (IOException ex) {
             ex.printStackTrace();
+            Logger.getLogger(GameController.class.getName())
+                    .log(Level.SEVERE, "Cannor read properties", new Exception(ex));
         } finally {
             if (input != null) {
                 try {
                     input.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Logger.getLogger(GameController.class.getName())
+                            .log(Level.SEVERE, "Cannot close input stream", new Exception(e));
                 }
             }
         }
@@ -64,12 +70,12 @@ public class GameController {
     public void setBaseParams(String width,
                               String height,
                               String snakeLenth,
-                              String frogCount,
+                              String appleCount,
                               String gameSpeed) {
         baseParams.put("width", Integer.parseInt(width));
         baseParams.put("height", Integer.parseInt(height));
         baseParams.put("snakeLenth", Integer.parseInt(snakeLenth));
-        baseParams.put("frogCount", Integer.parseInt(frogCount));
+        baseParams.put("appleCount", Integer.parseInt(appleCount));
         baseParams.put("gameSpeed", Integer.parseInt(gameSpeed));
     }
 
@@ -77,8 +83,8 @@ public class GameController {
         return baseParams;
     }
 
-    public CopyOnWriteArraySet<FrogMovement> getFrogMovements() {
-        return frogMovements;
+    public CopyOnWriteArraySet<AppleMovement> getAppleMovements() {
+        return appleMovements;
     }
 
     public ExecutorService getExecutor() {
@@ -87,18 +93,20 @@ public class GameController {
 
     public void startGame(Session session) {
         active = true;
-        executor = Executors.newFixedThreadPool(10);
+        executor = Executors.newFixedThreadPool(20);
         SnakeMovement snakeMovement = new SnakeMovement(this);
         sessionSnakeMovementsMap.put(session, snakeMovement);
         executor.submit(snakeMovement);
-        frogMovements = new CopyOnWriteArraySet<>();
-        for (int i = 0; i < this.baseParams.get("frogCount"); i++) {
-            FrogMovement frogMovement = getNewFrog();
-            frogMovements.add(frogMovement);
-            executor.submit(frogMovement);
+        appleMovements = new CopyOnWriteArraySet<>();
+        for (int i = 0; i < this.baseParams.get("appleCount"); i++) {
+            AppleMovement appleMovement = getNewApple();
+            appleMovements.add(appleMovement);
+            executor.submit(appleMovement);
         }
-        movementsSet.addAll(frogMovements);
+        movementsSet.addAll(appleMovements);
         movementsSet.add(snakeMovement);
+        dataSender = new DataSender(this);
+        executor.submit(dataSender);
     }
 
     public void runAdditionalSnake(Session session) {
@@ -109,8 +117,8 @@ public class GameController {
     }
 
 
-    public FrogMovement getNewFrog() {
-        return new GreenFrogMovement(this);
+    public AppleMovement getNewApple() {
+        return new SimpleAppleMovement(this);
     }
 
     public Random getRandom() {
@@ -120,9 +128,10 @@ public class GameController {
     public void stopGame() {
         active = false;
         sessionSnakeMovementsMap.clear();
-        frogMovements.clear();
+        appleMovements.clear();
         movementsSet.clear();
-        this.executor.shutdown();
+        dataSender = null;
+        this.executor.shutdownNow();
     }
 
     public ConcurrentHashMap<Session, SnakeMovement> getSessionSnakeMovementsMap() {
@@ -133,7 +142,7 @@ public class GameController {
         return active;
     }
 
-    public CopyOnWriteArraySet<AnimalMovement> getMovementsSet() {
+    public CopyOnWriteArraySet<Movement> getMovementsSet() {
         return movementsSet;
     }
 }

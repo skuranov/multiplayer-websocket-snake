@@ -21,7 +21,6 @@ JS_SNAKE.checkCoordinateInArray = function (coord, arr) {
 
 JS_SNAKE.game = (function () {
     var canvas, ctx;
-    var frameLength;
     var score1;
     var score2;
     var socket = new WebSocket("ws://localhost:8081/snakeServer");
@@ -42,9 +41,6 @@ JS_SNAKE.game = (function () {
         $canvas.attr('height', JS_SNAKE.height);
         canvas = $canvas[0];
         ctx = canvas.getContext('2d');
-        score1 = 0;
-        score2 = 0;
-        frameLength = 100;
         bindEvents();
     }
 
@@ -55,11 +51,11 @@ JS_SNAKE.game = (function () {
         if (gameData.action === "drawNewPosition") {
             scores = JSON.parse(gameData.scores);
             score1 = scores[0];
-            if (scores[1] !== null) {
-                score2 = scores[1];
+            if (scores[1] == null) {
+                score2 = 0;
             }
             else {
-                score2 = 0;
+                score2 = scores[1];
             }
             ctx.clearRect(0, 0, JS_SNAKE.width, JS_SNAKE.height);
             bodies = JSON.parse(gameData.bodies);
@@ -72,16 +68,8 @@ JS_SNAKE.game = (function () {
         }
     }
 
-    function gameAction() {
-        ctx.clearRect(0, 0, JS_SNAKE.width, JS_SNAKE.height);
-        draw();
-    }
-
-
     function drawBodies(bodies) {
-        //console.log(bodies)
         for (var i = 0; i < bodies.length; i++) {
-            //console.log(bodies[i])
             drawBody(bodies[i]);
         }
         ctx.restore();
@@ -97,7 +85,6 @@ JS_SNAKE.game = (function () {
     }
 
     function drawSection(position) {
-        //console.log(position);
         var x = JS_SNAKE.blockSize * position[0];
         var y = JS_SNAKE.blockSize * position[1];
         ctx.fillRect(x, y, JS_SNAKE.blockSize, JS_SNAKE.blockSize);
@@ -167,11 +154,8 @@ JS_SNAKE.game = (function () {
         var message = {
             action: "restart",
         };
-        console.log('trying restart');
         socket.send(JSON.stringify(message));
-        //JS_SNAKE.game.init();
     }
-
 
     function bindEvents() {
         var keysToDirections = {

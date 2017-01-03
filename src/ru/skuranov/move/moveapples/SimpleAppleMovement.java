@@ -1,8 +1,8 @@
-package ru.skuranov.moveanimals.moveapples;
+package ru.skuranov.move.moveapples;
 
 
 import ru.skuranov.GameController;
-import ru.skuranov.moveanimals.AppleMovement;
+import ru.skuranov.move.AppleMovement;
 
 import java.awt.*;
 

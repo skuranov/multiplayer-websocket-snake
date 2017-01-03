@@ -8,7 +8,7 @@ public class Body {
     private CopyOnWriteArrayList<Integer> coordX;
     private CopyOnWriteArrayList<Integer> coordY;
 
-    public Body(){
+    public Body() {
         coordX = new CopyOnWriteArrayList<>();
         coordY = new CopyOnWriteArrayList<>();
     }
@@ -29,12 +29,12 @@ public class Body {
         this.coordX = coordX;
     }
 
-    public ArrayList<Integer[]> getArrayView(){
-        ArrayList <Integer[]> arrayBody = new ArrayList<>();
-        for(int i = 0; i < getCoordX().size(); i++){
+    public ArrayList<Integer[]> getArrayView() {
+        ArrayList<Integer[]> arrayBody = new ArrayList<>();
+        for (int i = 0; i < getCoordX().size(); i++) {
             Integer[] innerAray = new Integer[2];
-            innerAray[0]=coordX.get(i);
-            innerAray[1]=coordY.get(i);
+            innerAray[0] = coordX.get(i);
+            innerAray[1] = coordY.get(i);
             arrayBody.add(innerAray);
         }
         return arrayBody;
