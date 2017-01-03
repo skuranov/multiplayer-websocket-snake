@@ -2,12 +2,14 @@ package ru.skuranov.moveanimals;
 
 import ru.skuranov.direction.Direction;
 import ru.skuranov.GameController;
-import ru.skuranov.moveanimals.movefrogs.GreenFrogMovement;
+import ru.skuranov.moveanimals.moveapples.SimpleAppleMovement;
 import ru.skuranov.websocket.EventSessionHandler;
 
-import java.util.Collection;
 import java.util.List;
-public class SnakeMovement extends AnimalMovement {
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class SnakeMovement extends Movement {
     private int snakeLenght;
     private boolean flInc;
     private int score;
@@ -22,7 +24,6 @@ public class SnakeMovement extends AnimalMovement {
             getBody().getCoordX().add(1);
             getBody().getCoordY().add(game.getBaseParams().get("snakeLenth") - i - 1);
         }
-
     }
 
     public int getSnakeLenght() {
@@ -31,15 +32,14 @@ public class SnakeMovement extends AnimalMovement {
 
     @Override
     public Object call() {
-        while (true) {
-            try {
-                Thread.sleep(1000 / getGame().getBaseParams().get("gameSpeed"));
-                move();
-            } catch (InterruptedException e) {
-                break;
-            }
+        while (true) try {
+            Thread.sleep(1000 / getGame().getBaseParams().get("gameSpeed"));
+            move();
+        } catch (InterruptedException e) {
+            Logger.getLogger(SnakeMovement.class.getName())
+                    .log(Level.SEVERE, "Thread interrupted", new Exception(e));
+            return e;
         }
-        return null;
     }
 
 
@@ -75,24 +75,24 @@ public class SnakeMovement extends AnimalMovement {
                     snakeBodyY.set(0, 0);
                 }
 
-                for (FrogMovement frogMovement : getGame().getFrogMovements()) {//Eating frogs by snake
-                    if ((snakeBodyX.get(i) == frogMovement.getBody().getCoordX().get(0)) && (snakeBodyY.get(i) ==
-                            frogMovement.getBody().getCoordY().get(0))) {
-                        if (frogMovement instanceof GreenFrogMovement) {
+                for (AppleMovement appleMovement : getGame().getAppleMovements()) {//Eating frogs by snake
+                    if ((snakeBodyX.get(i) == appleMovement.getBody().getCoordX().get(0)) && (snakeBodyY.get(i) ==
+                            appleMovement.getBody().getCoordY().get(0))) {
+                        if (appleMovement instanceof SimpleAppleMovement) {
                             flInc = true;
                             score++;
                         }
-                        frogMovement.cancel();
-                        getGame().getFrogMovements().remove(frogMovement);
-                        getGame().getMovementsSet().remove(frogMovement);
+                        appleMovement.cancel();
+                        getGame().getAppleMovements().remove(appleMovement);
+                        getGame().getMovementsSet().remove(appleMovement);
                     }
                 }
 
-                while (getGame().getFrogMovements().size() < getGame().getBaseParams().get("frogCount")) {//FrogMovement respawning
-                    FrogMovement tempFrogMovement = getGame().getNewFrog();
-                    getGame().getFrogMovements().add(tempFrogMovement);
-                    getGame().getMovementsSet().add(tempFrogMovement);
-                    getGame().getExecutor().submit(tempFrogMovement);
+                while (getGame().getAppleMovements().size() < getGame().getBaseParams().get("appleCount")) {//AppleMovement respawning
+                    AppleMovement appleMovement = getGame().getNewApple();
+                    getGame().getAppleMovements().add(appleMovement);
+                    getGame().getMovementsSet().add(appleMovement);
+                    getGame().getExecutor().submit(appleMovement);
                 }
 
                 for (int j = 1; j < snakeLenght; j++) {//Exit by eating itself
@@ -103,16 +103,20 @@ public class SnakeMovement extends AnimalMovement {
                     }
                 }
 
-                Collection<SnakeMovement> snakes = getGame().getSessionSnakeMovementsMap().values();
 
-                for (SnakeMovement snake : snakes) {
-                    if (!snake.equals(this) && checkBiteAnotherSnake(snake) != null) {
-                        snake.losePart(checkBiteAnotherSnake(snake));
-                    }
-                }
             }
         }
-        EventSessionHandler.getInstance().sendNewPositionsToClients();
+
+        for (SnakeMovement snake : getGame().getSessionSnakeMovementsMap().values()) {
+            if (!snake.equals(this) && checkBiteAnotherSnake(snake) != null) {
+                if (checkBiteAnotherSnake(snake)==0){
+                    EventSessionHandler.getInstance().sendGameOver();
+                    getGame().stopGame();
+                    break;
+                }
+                snake.losePart(checkBiteAnotherSnake(snake));
+            }
+        }
     }
 
 
@@ -129,11 +133,12 @@ public class SnakeMovement extends AnimalMovement {
     }
 
     private void losePart(Integer breakPoint) {
-        for (int i = getBody().getCoordX().size() - 1; i > breakPoint;  i--) {
+        score = score - (snakeLenght - breakPoint);
+        for (int i = getBody().getCoordX().size() - 1; i > breakPoint; i--) {
             getBody().getCoordX().remove(i);
             getBody().getCoordY().remove(i);
-            snakeLenght = getBody().getCoordX().size();
         }
+        snakeLenght = getBody().getCoordX().size();
     }
 
     public int getScore() {

@@ -1,13 +1,13 @@
-package ru.skuranov.moveanimals.movefrogs;
+package ru.skuranov.moveanimals.moveapples;
 
 
 import ru.skuranov.GameController;
-import ru.skuranov.moveanimals.FrogMovement;
+import ru.skuranov.moveanimals.AppleMovement;
 
 import java.awt.*;
 
 
-public class GreenFrogMovement extends FrogMovement {
+public class SimpleAppleMovement extends AppleMovement {
     @Override
     public int getLifeCycle() {
         return 0;
@@ -18,7 +18,7 @@ public class GreenFrogMovement extends FrogMovement {
         return new Color(65, 200, 67);
     }
 
-    public GreenFrogMovement(GameController game) {
+    public SimpleAppleMovement(GameController game) {
         super(game);
     }
 }

@@ -7,7 +7,7 @@ import ru.skuranov.GameController;
 
 import java.awt.*;
 
-public abstract class FrogMovement extends AnimalMovement {
+public abstract class AppleMovement extends Movement {
 
     protected Direction direction;
 
@@ -28,7 +28,7 @@ public abstract class FrogMovement extends AnimalMovement {
     }
 
 
-    public FrogMovement(GameController gameController) {
+    public AppleMovement(GameController gameController) {
         super(gameController);
         direction = new Direction();
         cycleCounter = 0;

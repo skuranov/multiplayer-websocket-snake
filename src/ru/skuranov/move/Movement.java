@@ -6,12 +6,12 @@ import ru.skuranov.GameController;
 
 import java.util.concurrent.Callable;
 
-public abstract class AnimalMovement implements Callable {
+public abstract class Movement implements Callable {
     private GameController game;
     private Body body;
     private Direction direction;
 
-    public AnimalMovement(GameController game) {
+    public Movement(GameController game) {
         this.game = game;
         this.body = new Body();
         this.direction = new Direction();
